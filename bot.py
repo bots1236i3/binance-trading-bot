@@ -2,8 +2,10 @@ import time
 import ccxt
 
 # 🔹 Binance API Keys (अपनी API Key और Secret यहाँ डालो)
-API_KEY = 'YOUR_BINANCE_API_KEY'
-API_SECRET = 'YOUR_BINANCE_SECRET_KEY'
+API_KEY = H5nJLOЕPBaCyAh4NRAEvT1|tQyPYPLXyRx8Kig8V3Nb
+D9uCFnzeYx0eW9fTJeoh0
+API_SECRET = Hj3owesaOYStBQW1r3UdzX1FrJw457K6ajNhHBKqdJrE
+BsmMx8bnGL7RCZPYG6Ai
 
 # 🔹 Binance एक्सचेंज से कनेक्ट करें
 exchange = ccxt.binance({
