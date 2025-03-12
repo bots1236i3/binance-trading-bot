@@ -1,0 +1,88 @@
+import time
+import ccxt
+
+# 🔹 Binance API Keys (अपनी API Key और Secret यहाँ डालो)
+API_KEY = 'YOUR_BINANCE_API_KEY'
+API_SECRET = 'YOUR_BINANCE_SECRET_KEY'
+
+# 🔹 Binance एक्सचेंज से कनेक्ट करें
+exchange = ccxt.binance({
+    'apiKey': API_KEY,
+    'secret': API_SECRET,
+    'options': {'defaultType': 'spot'}
+})
+
+# 🔹 ट्रेडिंग सेटिंग्स
+symbol = 'BTC/USDT'  # बिटकॉइन ट्रेडिंग पेयर
+investment = 10  # प्रति ट्रेड $10 - इसे 30 तक एडजस्ट कर सकते हो
+profit_target = 1.05  # 5% प्रॉफिट टार्गेट (1.05 = 5%)
+stop_loss = 0.98  # 2% स्टॉप लॉस (0.98 = -2%)
+
+# 🔹 Moving Average Crossover Strategy
+def get_moving_averages(symbol, timeframe='5m', length=50):
+    candles = exchange.fetch_ohlcv(symbol, timeframe)
+    closes = [candle[4] for candle in candles]
+    return sum(closes[-length:]) / length
+
+def get_rsi(symbol, timeframe='5m', period=14):
+    candles = exchange.fetch_ohlcv(symbol, timeframe)
+    closes = [candle[4] for candle in candles]
+    gains, losses = [], []
+
+    for i in range(1, len(closes)):
+        change = closes[i] - closes[i-1]
+        gains.append(max(change, 0))
+        losses.append(abs(min(change, 0)))
+
+    avg_gain = sum(gains[-period:]) / period
+    avg_loss = sum(losses[-period:]) / period
+    rs = avg_gain / avg_loss if avg_loss != 0 else 0
+    rsi = 100 - (100 / (1 + rs))
+
+    return rsi
+
+# 🔹 ऑटोमेटेड ट्रेडिंग फंक्शन
+def trade():
+    print("🔹 बॉट शुरू हो गया है...")
+
+    while True:
+        try:
+            price = exchange.fetch_ticker(symbol)['last']
+            ma_50 = get_moving_averages(symbol, length=50)
+            ma_200 = get_moving_averages(symbol, length=200)
+            rsi = get_rsi(symbol)
+
+            print(f"🔹 लाइव प्राइस: {price}, MA50: {ma_50}, MA200: {ma_200}, RSI: {rsi}")
+
+            if ma_50 > ma_200 and rsi < 30:
+                print("✅ BUY सिग्नल मिला! ट्रेड शुरू कर रहा है...")
+                order = exchange.create_market_buy_order(symbol, investment / price)
+                buy_price = order['price']
+
+                target_price = buy_price * profit_target
+                stop_loss_price = buy_price * stop_loss
+
+                print(f"🎯 टार्गेट प्राइस: {target_price}, ❌ स्टॉप लॉस: {stop_loss_price}")
+
+                while True:
+                    new_price = exchange.fetch_ticker(symbol)['last']
+
+                    if new_price >= target_price:
+                        print("✅ प्रॉफिट टार्गेट हिट! सेल कर रहे हैं...")
+                        exchange.create_market_sell_order(symbol, investment / new_price)
+                        break
+                    elif new_price <= stop_loss_price:
+                        print("❌ स्टॉप लॉस हिट! सेल कर रहे हैं...")
+                        exchange.create_market_sell_order(symbol, investment / new_price)
+                        break
+
+                    time.sleep(5)
+
+            time.sleep(60)  # हर मिनट डेटा अपडेट करेगा
+
+        except Exception as e:
+            print(f"⚠️ Error: {e}")
+            time.sleep(10)
+
+# 🔹 बॉट शुरू करें
+trade()
